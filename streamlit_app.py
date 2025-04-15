@@ -1,42 +1,77 @@
 import streamlit as st
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 
 # Load dataset
 df = pd.read_csv("final_perfume_data.csv", encoding="ISO-8859-1")
 
-# Combine text fields for NLP
+# Combine text for searching
 df["combined"] = df["Description"].fillna("") + " " + df["Notes"].fillna("")
 
-# Vectorize text using TF-IDF
-vectorizer = TfidfVectorizer(stop_words='english')
-tfidf_matrix = vectorizer.fit_transform(df["combined"])
+# Session state init
+if 'step' not in st.session_state:
+    st.session_state.step = 1
+if 'answers' not in st.session_state:
+    st.session_state.answers = {}
 
-# Streamlit UI
-st.set_page_config(page_title="Perfume Recommender", layout="centered")
-st.title("🌸 Perfume Recommender")
-st.markdown("Enter a perfume name below and discover similar scents!")
+# App title
+st.set_page_config(page_title="Perfume Matchmaker", layout="centered")
+st.title("🌸 Perfume Personality Matchmaker")
+st.markdown("Let your vibes choose your scent. Answer a few questions and we'll match you with your signature fragrance!")
 
-user_input = st.text_input("Type a perfume name:")
+# Step 1 – Mood
+if st.session_state.step == 1:
+    st.subheader("Step 1: What's your current vibe?")
+    mood = st.radio("", ["Romantic", "Bold", "Fresh", "Mysterious", "Cozy", "Energetic"])
+    if st.button("Next ➡️"):
+        st.session_state.answers["mood"] = mood
+        st.session_state.step += 1
+        st.experimental_rerun()
 
-if user_input:
-    matches = df[df["Name"].str.contains(user_input, case=False, na=False)]
+# Step 2 – Occasion
+elif st.session_state.step == 2:
+    st.subheader("Step 2: What's the occasion?")
+    occasion = st.radio("", ["Everyday Wear", "Date Night", "Work", "Party"])
+    if st.button("Next ➡️"):
+        st.session_state.answers["occasion"] = occasion
+        st.session_state.step += 1
+        st.experimental_rerun()
 
-    if not matches.empty:
-        index = matches.index[0]
-        similarities = cosine_similarity(tfidf_matrix[index], tfidf_matrix).flatten()
-        similar_indices = similarities.argsort()[-6:][::-1]
+# Step 3 – Notes
+elif st.session_state.step == 3:
+    st.subheader("Step 3: What kind of notes do you love?")
+    notes = st.multiselect("Pick a few that speak to your soul 💫", 
+                           ["Vanilla", "Oud", "Citrus", "Floral", "Spicy", "Woody", "Sweet", "Musky"])
+    if st.button("Get My Recommendations 💖"):
+        st.session_state.answers["notes"] = notes
+        st.session_state.step += 1
+        st.experimental_rerun()
 
-        st.subheader("✨ You might also like:")
-        for i in similar_indices:
-            if i == index:
-                continue
-            perfume = df.iloc[i]
-            st.markdown(f"**{perfume['Name']}** by *{perfume['Brand']}*")
-            if pd.notna(perfume["Image URL"]):
-                st.image(perfume["Image URL"], width=150)
-            st.write(perfume["Description"])
+# Step 4 – Results
+elif st.session_state.step == 4:
+    st.subheader("💐 Based on your vibe, you might love these:")
+
+    mood = st.session_state.answers["mood"]
+    occasion = st.session_state.answers["occasion"]
+    notes = st.session_state.answers["notes"]
+
+    # Search using keywords in the combined text
+    query_keywords = [mood, occasion] + notes
+    query_string = "|".join(query_keywords)
+
+    results = df[df["combined"].str.contains(query_string, case=False, na=False)]
+
+    if not results.empty:
+        for _, row in results.head(5).iterrows():
+            st.markdown(f"### **{row['Name']}** by *{row['Brand']}*")
+            if pd.notna(row["Image URL"]):
+                st.image(row["Image URL"], width=180)
+            st.write(row["Description"])
             st.markdown("---")
     else:
-        st.error("Perfume not found 😢 Try a different name.")
+        st.error("No perfect match found 😢 Try a different mood or notes!")
+
+    if st.button("🔄 Start Over"):
+        st.session_state.step = 1
+        st.session_state.answers = {}
+        st.experimental_rerun()
+
