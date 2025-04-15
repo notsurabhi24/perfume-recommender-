@@ -41,14 +41,17 @@ if not st.session_state.authenticated:
         st.warning("Please enter your username and password")
 
 # Load perfume data with encoding fallback
+
 try:
-    df = pd.read_csv("final_perfume_data.csv", encoding="ISO-8859-1")
+    df = pd.read_csv("final_perfume_data.csv", encoding="utf-8")
 except UnicodeDecodeError:
     try:
-        df = pd.read_csv("final_perfume_data.csv", encoding="utf-8")
+        df = pd.read_csv("final_perfume_data.csv", encoding="ISO-8859-1")
     except Exception as e:
-        st.error("Failed to load perfume data. Please check the file format or encoding.")
+        st.error(f"Failed to load perfume data: {e}")
         st.stop()
+
+
 
 # Combine text for searching
 df["combined"] = df["Description"].fillna("") + " " + df["Notes"].fillna("")
