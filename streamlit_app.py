@@ -24,8 +24,9 @@ if st.session_state.step == 1:
     mood = st.radio("", ["Romantic", "Bold", "Fresh", "Mysterious", "Cozy", "Energetic"])
     if st.button("Next ➡️"):
         st.session_state.answers["mood"] = mood
-        st.session_state.step += 1
-        st.experimental_rerun()
+        st.session_state.step = 2  # Move to next step directly
+        st.session_state.answers["mood"] = mood  # Store the mood
+        # No rerun required, move directly to next step in flow
 
 # Step 2 – Occasion
 elif st.session_state.step == 2:
@@ -33,8 +34,7 @@ elif st.session_state.step == 2:
     occasion = st.radio("", ["Everyday Wear", "Date Night", "Work", "Party"])
     if st.button("Next ➡️"):
         st.session_state.answers["occasion"] = occasion
-        st.session_state.step += 1
-        st.experimental_rerun()
+        st.session_state.step = 3  # Move to next step
 
 # Step 3 – Notes
 elif st.session_state.step == 3:
@@ -43,8 +43,7 @@ elif st.session_state.step == 3:
                            ["Vanilla", "Oud", "Citrus", "Floral", "Spicy", "Woody", "Sweet", "Musky"])
     if st.button("Get My Recommendations 💖"):
         st.session_state.answers["notes"] = notes
-        st.session_state.step += 1
-        st.experimental_rerun()
+        st.session_state.step = 4  # Proceed to results after getting notes
 
 # Step 4 – Results
 elif st.session_state.step == 4:
@@ -58,7 +57,7 @@ elif st.session_state.step == 4:
     query_keywords = [mood, occasion] + notes
     query_string = "|".join(query_keywords)
 
-    # Perform the search for matches
+    # Perform the search for matches in the combined column
     results = df[df["combined"].str.contains(query_string, case=False, na=False)]
 
     if not results.empty:
@@ -74,4 +73,4 @@ elif st.session_state.step == 4:
     if st.button("🔄 Start Over"):
         st.session_state.step = 1
         st.session_state.answers = {}
-        st.experimental_rerun()
+        # Resetting and no rerun needed since step will be reset manually
