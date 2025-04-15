@@ -1,139 +1,76 @@
 import streamlit as st
 import pandas as pd
-import os
-import hashlib
-from datetime import datetime
 
-# ---------- Utils ----------
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+# Load dataset
+df = pd.read_csv("final_perfume_data.csv", encoding="ISO-8859-1")
 
-def load_users():
-    if os.path.exists("users.csv") and os.path.getsize("users.csv") > 0:
-        return pd.read_csv("users.csv")
-    return pd.DataFrame(columns=["username", "password"])
+# Combine text for searching using the correct column names
+df["combined"] = df["Description"].fillna("") + " " + df["Notes"].fillna("")
 
-def save_user(username, password):
-    users = load_users()
-    new_user = pd.DataFrame([[username, hash_password(password)]], columns=["username", "password"])
-    users = pd.concat([users, new_user], ignore_index=True)
-    users.to_csv("users.csv", index=False)
-
-def check_credentials(username, password):
-    users = load_users()
-    hashed = hash_password(password)
-    return ((users["username"] == username) & (users["password"] == hashed)).any()
-
-def load_perfume_data():
-    if not os.path.exists("final_perfume_data.csv"):
-        return pd.DataFrame()
-    try:
-        return pd.read_csv("final_perfume_data.csv", encoding="utf-8", errors="ignore")
-    except:
-        return pd.DataFrame()
-
-def save_history(entry):
-    columns = ["username", "timestamp", "mood", "occasion", "notes", "recommendations"]
-    if os.path.exists("history.csv") and os.path.getsize("history.csv") > 0:
-        history = pd.read_csv("history.csv")
-    else:
-        history = pd.DataFrame(columns=columns)
-    history = pd.concat([history, pd.DataFrame([entry])], ignore_index=True)
-    history.to_csv("history.csv", index=False)
-
-# ---------- Init session ----------
-if "auth" not in st.session_state:
-    st.session_state.auth = False
-if "user" not in st.session_state:
-    st.session_state.user = ""
-if "step" not in st.session_state:
-    st.session_state.step = 0
-if "data" not in st.session_state:
-    st.session_state.data = load_perfume_data()
-if "answers" not in st.session_state:
+# Session state init
+if 'step' not in st.session_state:
+    st.session_state.step = 1
+if 'answers' not in st.session_state:
     st.session_state.answers = {}
 
-# ---------- Auth ----------
-st.title("💐 Perfume Matchmaker")
+# App title
+st.set_page_config(page_title="Perfume Matchmaker", layout="centered")
+st.title("🌸 Perfume Personality Matchmaker")
+st.markdown("Let your vibes choose your scent. Answer a few questions and we'll match you with your signature fragrance!")
 
-if not st.session_state.auth:
-    mode = st.radio("Choose", ["Login", "Register"])
-    u = st.text_input("Username")
-    p = st.text_input("Password", type="password")
+# Step 1 – Mood
+if st.session_state.step == 1:
+    st.subheader("Step 1: What's your current vibe?")
+    mood = st.radio("", ["Romantic", "Bold", "Fresh", "Mysterious", "Cozy", "Energetic"])
+    if st.button("Next ➡"):
+        st.session_state.answers["mood"] = mood
+        st.session_state.step = 2  # Move to next step directly
+        st.session_state.answers["mood"] = mood  # Store the mood
+        # No rerun required, move directly to next step in flow
 
-    if st.button(mode):
-        if u and p:
-            if mode == "Register":
-                if u in load_users()["username"].values:
-                    st.error("Username taken.")
-                else:
-                    save_user(u, p)
-                    st.success("Registered! Login now.")
-            else:
-                if check_credentials(u, p):
-                    st.session_state.auth = True
-                    st.session_state.user = u
-                    st.session_state.step = 1
-                else:
-                    st.error("Invalid login.")
-        else:
-            st.warning("Fill in both fields.")
+# Step 2 – Occasion
+elif st.session_state.step == 2:
+    st.subheader("Step 2: What's the occasion?")
+    occasion = st.radio("", ["Everyday Wear", "Date Night", "Work", "Party"])
+    if st.button("Next ➡"):
+        st.session_state.answers["occasion"] = occasion
+        st.session_state.step = 3  # Move to next step
 
-# ---------- App ----------
-elif st.session_state.auth:
-    df = st.session_state.data
+# Step 3 – Notes
+elif st.session_state.step == 3:
+    st.subheader("Step 3: What kind of notes do you love?")
+    notes = st.multiselect("Pick a few that speak to your soul 💫", 
+                           ["Vanilla", "Oud", "Citrus", "Floral", "Spicy", "Woody", "Sweet", "Musky"])
+    if st.button("Get My Recommendations 💖"):
+        st.session_state.answers["notes"] = notes
+        st.session_state.step = 4  # Proceed to results after getting notes
 
-    if df.empty:
-        st.error("Perfume data not found or failed to load.")
-        st.stop()
+# Step 4 – Results
+elif st.session_state.step == 4:
+    st.subheader("💐 Based on your vibe, you might love these:")
 
-    df["combined"] = df["Description"].fillna("") + " " + df["Notes"].fillna("")
+    mood = st.session_state.answers["mood"]
+    occasion = st.session_state.answers["occasion"]
+    notes = st.session_state.answers["notes"]
 
-    if st.session_state.step == 1:
-        mood = st.radio("Your mood", ["Romantic", "Bold", "Fresh", "Mysterious", "Cozy", "Energetic"])
-        if st.button("Next"):
-            st.session_state.answers["mood"] = mood
-            st.session_state.step = 2
+    # Search using keywords in the combined text
+    query_keywords = [mood, occasion] + notes
+    query_string = "|".join(query_keywords)
 
-    elif st.session_state.step == 2:
-        occasion = st.radio("Occasion", ["Everyday Wear", "Date Night", "Work", "Party"])
-        if st.button("Next"):
-            st.session_state.answers["occasion"] = occasion
-            st.session_state.step = 3
+    # Perform the search for matches in the combined column
+    results = df[df["combined"].str.contains(query_string, case=False, na=False)]
 
-    elif st.session_state.step == 3:
-        notes = st.multiselect("Choose notes", ["Vanilla", "Oud", "Citrus", "Floral", "Spicy", "Woody", "Sweet", "Musky"])
-        if st.button("Get Results"):
-            st.session_state.answers["notes"] = notes
-            st.session_state.step = 4
+    if not results.empty:
+        for _, row in results.head(5).iterrows():
+            st.markdown(f"### *{row['Name']}* by {row['Brand']}")
+            if pd.notna(row["Image URL"]):
+                st.image(row["Image URL"], width=180)
+            st.write(row["Description"])
+            st.markdown("---")
+    else:
+        st.error("No perfect match found 😢 Try a different mood or notes!")
 
-    elif st.session_state.step == 4:
-        mood = st.session_state.answers["mood"]
-        occasion = st.session_state.answers["occasion"]
-        notes = st.session_state.answers["notes"]
-
-        query = "|".join([mood, occasion] + notes)
-        res = df[df["combined"].str.contains(query, case=False, na=False)]
-
-        if not res.empty:
-            for _, r in res.head(5).iterrows():
-                st.markdown(f"### **{r['Name']}** by *{r['Brand']}*")
-                if pd.notna(r["Image URL"]):
-                    st.image(r["Image URL"], width=150)
-                st.write(r["Description"])
-                st.markdown("---")
-        else:
-            st.warning("No results found. Try different notes.")
-
-        save_history({
-            "username": st.session_state.user,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "mood": mood,
-            "occasion": occasion,
-            "notes": ", ".join(notes),
-            "recommendations": ", ".join(res["Name"].head(5)) if not res.empty else "None"
-        })
-
-        if st.button("Start Over"):
-            st.session_state.step = 1
-            st.session_state.answers = {}
+    if st.button("🔄 Start Over"):
+        st.session_state.step = 1
+        st.session_state.answers = {}
+        # Resetting and no rerun needed since step will be reset manually
