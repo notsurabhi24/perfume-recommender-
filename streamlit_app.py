@@ -14,9 +14,16 @@ for file in [USERS_FILE, HISTORY_FILE]:
     if not os.path.isfile(file):
         pd.DataFrame().to_csv(file, index=False)
 
-# Load perfume dataset
-df = pd.read_csv(DATA_FILE, encoding="ISO-8859-1")
-df["combined"] = df["Description"].fillna("") + " " + df["Notes"].fillna("")
+# Load perfume dataset with appropriate encoding
+def load_data():
+    try:
+        df = pd.read_csv(DATA_FILE, encoding='utf-8')
+    except UnicodeDecodeError:
+        df = pd.read_csv(DATA_FILE, encoding='ISO-8859-1')
+    df["combined"] = df["Description"].fillna("") + " " + df["Notes"].fillna("")
+    return df
+
+df = load_data()
 
 # Password hashing
 def hash_password(password):
@@ -153,6 +160,18 @@ else:
             recommendations = []
             for _, row in results.head(5).iterrows():
                 st.markdown(f"### **{row['Name']}** by *{row['Brand']}*")
-                if pd.notna(row["
-::contentReference[oaicite:10]{index=10}
+                if pd.notna(row["Image URL"]):
+                    st.image(row["Image URL"], width=180)
+                st.write(row["Description"])
+                recommendations.append(row['Name'])
+                st.markdown("---")
+            save_history(st.session_state.username, mood, occasion, notes, recommendations)
+        else:
+            st.error("No perfect match found 😢 Try a different mood or notes!")
+
+        if st.button("🔄 Start Over"):
+            st.session_state.step = 1
+            st.session_state.answers = {}
+           
+::contentReference[oaicite:0]{index=0}
  
