@@ -5,7 +5,7 @@ import pandas as pd
 df = pd.read_csv("final_perfume_data.csv", encoding="ISO-8859-1")
 
 # Combine text for searching
-df["combined"] = df["Description"].fillna("") + " " + df["Notes"].fillna("")
+df["combined"] = df["Description"].fillna("") + " " + df["Notes"].fillna("") + " " + df["Mood"].fillna("") + " " + df["Occasion"].fillna("")
 
 # Session state init
 if 'step' not in st.session_state:
@@ -58,6 +58,7 @@ elif st.session_state.step == 4:
     query_keywords = [mood, occasion] + notes
     query_string = "|".join(query_keywords)
 
+    # Perform the search for matches
     results = df[df["combined"].str.contains(query_string, case=False, na=False)]
 
     if not results.empty:
@@ -74,4 +75,3 @@ elif st.session_state.step == 4:
         st.session_state.step = 1
         st.session_state.answers = {}
         st.experimental_rerun()
-
