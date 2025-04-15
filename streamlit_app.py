@@ -4,8 +4,8 @@ import pandas as pd
 # Load dataset
 df = pd.read_csv("final_perfume_data.csv", encoding="ISO-8859-1")
 
-# Combine text for searching
-df["combined"] = df["Description"].fillna("") + " " + df["Notes"].fillna("") + " " + df["Mood"].fillna("") + " " + df["Occasion"].fillna("")
+# Combine text for searching using the correct column names
+df["combined"] = df["Description"].fillna("") + " " + df["Notes"].fillna("")
 
 # Session state init
 if 'step' not in st.session_state:
