@@ -119,7 +119,7 @@ elif st.session_state.step == 4:
         "recommendations": ", ".join(results["Name"].head(5)) if not results.empty else "None"
     }
     log_df = pd.DataFrame([log_data])
-    log_df.to_csv("user_logs.csv", mode="a", header=not os.path.exists("user_logs.csv"), index=False)
+    log_df.to_csv("users.csv", mode="a", header=not os.path.exists("users.csv"), index=False)
 
     if st.button("🔄 Start Over"):
         st.session_state.step = 1
