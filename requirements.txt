@@ -1,7 +1,5 @@
-chardet
+
 streamlit
 pandas
 scikit-learn
-streamlit_authenticator
-yaml
-os
+
